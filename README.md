@@ -2,7 +2,7 @@
 
 -  I’m researching general-purpose decision-making models.
 -  How to reach me: [xlzhuang24@gmail.com](mailto:xlzhuang24@gmail.com)
--  About me:[https://caspian.zhuangxialie.workers.dev/](mailto:https://caspian.zhuangxialie.workers.dev/)
+-  About me: [https://caspian.zhuangxialie.workers.dev/](mailto:https://caspian.zhuangxialie.workers.dev/)
 
 <div align="center">
 
