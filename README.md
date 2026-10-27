@@ -1,3 +1,8 @@
+### Hi there 👋
+
+- 🔭 I’m researching general-purpose decision-making models.
+- 📫 How to reach me: [xlzhuang24@gmail.com](mailto:xlzhuang24@gmail.com)
+
 <div align="center">
 
 <a href="https://vibecafe.ai/@aggressive">
