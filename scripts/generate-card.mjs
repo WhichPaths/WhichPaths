@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Generates vibe-usage-card.svg — a full 30-day dashboard replica of vibecafe.ai/usage.
-// Data: GET /api/usage?days=60 (last 30 days + previous 30 for deltas).
+// Generates vibe-usage-card.svg — a full 90-day dashboard replica of vibecafe.ai/usage.
+// Data: request up to 180 days; previous 90-day deltas use available history.
 // API key: env VIBE_USAGE_API_KEY, or local ~/.vibe-usage/config.json.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 
 const TZ_OFFSET_H = 8; // UTC+8 for day/hour grouping
-const WINDOW = 30;     // days shown in the dashboard
+const WINDOW = 90;     // days shown in the dashboard
 
 function getApiKey() {
   if (process.env.VIBE_USAGE_API_KEY) return process.env.VIBE_USAGE_API_KEY;
@@ -91,7 +91,7 @@ for (const b of curB) {
 }
 
 // ---- heatmap: weekday x hour, sessions counted at their local start hour ----
-// /api/usage has no per-hour data for a 30-day range: buckets are daily whenever
+// /api/usage has no per-hour data for a multi-day range: buckets are daily whenever
 // days > 1, and sessions carry no hourly breakdown. firstMessageAt is the only
 // real sub-day timestamp, and each session contributes exactly one true point.
 const heat = Array.from({ length: 7 }, () => new Array(24).fill(0));
@@ -156,16 +156,17 @@ cardsRow2.forEach((c, i) => { cardsSvg += cardSvg(c, PAD + i * (CARD_W + GAP), r
 // ---- top filter bar (static pills) ----
 function pillRow() {
   const items = ['今天', '24H', '7D', '30D', '90D', '自定义'];
+  const pillWidth = items.reduce((sum, it) => sum + it.length * 12 + 20, 6);
   let x = PAD, out = '';
-  out += `<rect x="${x}" y="14" width="248" height="26" rx="13" fill="#111113" stroke="#232326"/>`;
+  out += `<rect x="${x}" y="14" width="${pillWidth}" height="26" rx="13" fill="#111113" stroke="#232326"/>`;
   for (const it of items) {
     const w = it.length * 12 + 16;
-    const active = it === '30D';
+    const active = it === `${WINDOW}D`;
     if (active) out += `<rect x="${x + 5}" y="17" width="${w}" height="20" rx="10" fill="#fafafa"/>`;
     out += `<text x="${x + 5 + w / 2}" y="31" font-size="11" text-anchor="middle" fill="${active ? '#09090b' : '#a1a1aa'}">${it}</text>`;
     x += w + 4;
   }
-  x = PAD + 258;
+  x = PAD + pillWidth + 10;
   for (const f of ['工具 全部', '模型 全部', '项目 全部', '终端 全部']) {
     const w = f.length * 11 + 30;
     out += `<rect x="${x}" y="14" width="${w}" height="26" rx="13" fill="#111113" stroke="#232326"/>
@@ -184,7 +185,7 @@ function trendPanel(x, y) {
   const slot = chartW / n;
   const barW = Math.max(3, Math.min(46, slot * 0.66));
   const barRx = barW > 6 ? 3 : 1.5;
-  const labelEvery = n > 12 ? 5 : 1; // sparse labels for 30-day view
+  const labelEvery = n > 12 ? Math.ceil(n / 6) : 1; // keep longer ranges readable
   let bars = '', labels = '';
   days.forEach((d, i) => {
     const cx = chartX + slot * (i + 0.5);
