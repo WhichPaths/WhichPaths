@@ -50,7 +50,7 @@ function stats(bs, ss) {
               active: 0, duration: 0, sessions: ss.length, msgs: 0, userMsgs: 0 };
   for (const b of bs) {
     s.cost += +b.estimatedCost || 0;
-    // Dashboard's 总 Token includes cached input tokens
+    // Dashboard's Total Tokens includes cached input tokens
     s.total += (+b.totalTokens || 0) + (+b.cachedInputTokens || 0);
     s.input += +b.inputTokens || 0;
     s.output += +b.outputTokens || 0;
@@ -124,18 +124,18 @@ const PANEL_W = (W - PAD * 2 - GAP) / 2;
 const H = panelY + panelH + PAD;
 
 const cardsRow1 = [
-  { label: '预估费用', value: '$' + cur.cost.toFixed(2), d: delta(cur.cost, prev.cost), color: '#4ade80' },
-  { label: '总 Token', value: fmtTok(cur.total), d: delta(cur.total, prev.total), color: '#fafafa' },
-  { label: '输入 Token', value: fmtTok(cur.input), d: delta(cur.input, prev.input), color: '#fafafa' },
-  { label: '输出 Token', value: fmtTok(cur.output), d: delta(cur.output, prev.output), color: '#fafafa' },
-  { label: '缓存 Token', value: fmtTok(cur.cached), d: delta(cur.cached, prev.cached), color: '#52525b' },
+  { label: 'Estimated Cost', value: '$' + cur.cost.toFixed(2), d: delta(cur.cost, prev.cost), color: '#4ade80' },
+  { label: 'Total Tokens', value: fmtTok(cur.total), d: delta(cur.total, prev.total), color: '#fafafa' },
+  { label: 'Input Tokens', value: fmtTok(cur.input), d: delta(cur.input, prev.input), color: '#fafafa' },
+  { label: 'Output Tokens', value: fmtTok(cur.output), d: delta(cur.output, prev.output), color: '#fafafa' },
+  { label: 'Cached Tokens', value: fmtTok(cur.cached), d: delta(cur.cached, prev.cached), color: '#52525b' },
 ];
 const cardsRow2 = [
-  { label: '活跃时长', value: fmtHrs(cur.active), d: delta(cur.active, prev.active), color: '#60a5fa' },
-  { label: '总时长', value: fmtHrs(cur.duration), d: delta(cur.duration, prev.duration), color: '#fafafa' },
-  { label: '会话数', value: fmtInt(cur.sessions), d: delta(cur.sessions, prev.sessions), color: '#fafafa' },
-  { label: '总消息数', value: fmtInt(cur.msgs), d: delta(cur.msgs, prev.msgs), color: '#fafafa' },
-  { label: '用户消息数', value: fmtInt(cur.userMsgs), d: delta(cur.userMsgs, prev.userMsgs), color: '#fafafa' },
+  { label: 'Active Time', value: fmtHrs(cur.active), d: delta(cur.active, prev.active), color: '#60a5fa' },
+  { label: 'Total Time', value: fmtHrs(cur.duration), d: delta(cur.duration, prev.duration), color: '#fafafa' },
+  { label: 'Sessions', value: fmtInt(cur.sessions), d: delta(cur.sessions, prev.sessions), color: '#fafafa' },
+  { label: 'Total Messages', value: fmtInt(cur.msgs), d: delta(cur.msgs, prev.msgs), color: '#fafafa' },
+  { label: 'User Messages', value: fmtInt(cur.userMsgs), d: delta(cur.userMsgs, prev.userMsgs), color: '#fafafa' },
 ];
 
 function cardSvg(c, x, y) {
@@ -155,20 +155,20 @@ cardsRow2.forEach((c, i) => { cardsSvg += cardSvg(c, PAD + i * (CARD_W + GAP), r
 
 // ---- top filter bar (static pills) ----
 function pillRow() {
-  const items = ['今天', '24H', '7D', '30D', '90D', '自定义'];
-  const pillWidth = items.reduce((sum, it) => sum + it.length * 12 + 20, 6);
+  const items = ['Today', '24H', '7D', '30D', '90D', 'Custom'];
+  const pillWidth = items.reduce((sum, it) => sum + it.length * 7 + 20, 6);
   let x = PAD, out = '';
   out += `<rect x="${x}" y="14" width="${pillWidth}" height="26" rx="13" fill="#111113" stroke="#232326"/>`;
   for (const it of items) {
-    const w = it.length * 12 + 16;
+    const w = it.length * 7 + 16;
     const active = it === `${WINDOW}D`;
     if (active) out += `<rect x="${x + 5}" y="17" width="${w}" height="20" rx="10" fill="#fafafa"/>`;
     out += `<text x="${x + 5 + w / 2}" y="31" font-size="11" text-anchor="middle" fill="${active ? '#09090b' : '#a1a1aa'}">${it}</text>`;
     x += w + 4;
   }
   x = PAD + pillWidth + 10;
-  for (const f of ['工具 全部', '模型 全部', '项目 全部', '终端 全部']) {
-    const w = f.length * 11 + 30;
+  for (const f of ['Tool: All', 'Model: All', 'Project: All', 'Terminal: All']) {
+    const w = f.length * 7 + 30;
     out += `<rect x="${x}" y="14" width="${w}" height="26" rx="13" fill="#111113" stroke="#232326"/>
       <text x="${x + w / 2}" y="31" font-size="11" text-anchor="middle" fill="#a1a1aa">${f} ▾</text>`;
     x += w + 8;
@@ -198,16 +198,16 @@ function trendPanel(x, y) {
   return `
   <g>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#0d0d0f" stroke="#232326"/>
-    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">📈 每日趋势</text>
+    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">📈 Daily Trend</text>
     <g font-size="10" fill="#71717a">
-      <circle cx="${x + w - 218}" cy="${y + 26}" r="4" fill="#fafafa"/><text x="${x + w - 210}" y="${y + 30}">输出</text>
-      <circle cx="${x + w - 178}" cy="${y + 26}" r="4" fill="#52525b"/><text x="${x + w - 170}" y="${y + 30}">输入</text>
-      <circle cx="${x + w - 138}" cy="${y + 26}" r="4" fill="#3f3f46"/><text x="${x + w - 130}" y="${y + 30}">缓存</text>
+      <circle cx="${x + w - 300}" cy="${y + 26}" r="4" fill="#fafafa"/><text x="${x + w - 292}" y="${y + 30}">Output</text>
+      <circle cx="${x + w - 240}" cy="${y + 26}" r="4" fill="#52525b"/><text x="${x + w - 232}" y="${y + 30}">Input</text>
+      <circle cx="${x + w - 180}" cy="${y + 26}" r="4" fill="#3f3f46"/><text x="${x + w - 172}" y="${y + 30}">Cached</text>
     </g>
     <rect x="${x + w - 100}" y="${y + 15}" width="84" height="22" rx="11" fill="#111113" stroke="#232326"/>
     <rect x="${x + w - 98}" y="${y + 17}" width="34" height="18" rx="9" fill="#fafafa"/>
     <text x="${x + w - 81}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#09090b">Token</text>
-    <text x="${x + w - 48}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#71717a">费用</text>
+    <text x="${x + w - 48}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#71717a">Cost</text>
     <text x="${x + 40}" y="${chartY + 8}" font-size="10" fill="#52525b" text-anchor="end">${fmtTok(maxV)}</text>
     <text x="${x + 40}" y="${chartY + chartH}" font-size="10" fill="#52525b" text-anchor="end">0</text>
     <line x1="${chartX}" y1="${chartY + chartH + 0.5}" x2="${chartX + chartW}" y2="${chartY + chartH + 0.5}" stroke="#232326"/>
@@ -223,7 +223,7 @@ function heatPanel(x, y) {
   const cols = 24, rows = 7;
   const cell = Math.min((w - 78) / cols, (h - 130) / rows) - 2.5;
   const step = cell + 3;
-  const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const shades = ['#161618', '#2a2a2e', '#4b4b52', '#75757e', '#a8a8b0', '#e8e8ec'];
   let cells = '', rowLabels = '', colLabels = '';
   for (let r = 0; r < rows; r++) {
@@ -238,17 +238,17 @@ function heatPanel(x, y) {
   for (let c = 0; c < cols; c += 3) {
     colLabels += `<text x="${gridX + c * step + cell / 2}" y="${gridY + rows * step + 16}" font-size="10" fill="#71717a" text-anchor="middle">${String(c).padStart(2, '0')}</text>`;
   }
-  let legend = `<text x="${x + w - 130}" y="${y + h - 16}" font-size="10" fill="#71717a">少</text>`;
+  let legend = `<text x="${x + w - 174}" y="${y + h - 16}" font-size="10" fill="#71717a">Less</text>`;
   shades.forEach((s, i) => {
-    legend += `<rect x="${x + w - 116 + i * 14}" y="${y + h - 25}" width="11" height="11" rx="2.5" fill="${s}"/>`;
+    legend += `<rect x="${x + w - 140 + i * 14}" y="${y + h - 25}" width="11" height="11" rx="2.5" fill="${s}"/>`;
   });
-  legend += `<text x="${x + w - 116 + shades.length * 14 + 4}" y="${y + h - 16}" font-size="10" fill="#71717a">多</text>`;
+  legend += `<text x="${x + w - 140 + shades.length * 14 + 4}" y="${y + h - 16}" font-size="10" fill="#71717a">More</text>`;
   return `
   <g>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#0d0d0f" stroke="#232326"/>
-    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">🗓 分时活跃</text>
+    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">🗓 Hourly Activity</text>
     <rect x="${x + w - 100}" y="${y + 15}" width="84" height="22" rx="11" fill="#111113" stroke="#232326"/>
-    <text x="${x + w - 58}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#a1a1aa">会话数</text>
+    <text x="${x + w - 58}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#a1a1aa">Sessions</text>
     ${rowLabels}${cells}${colLabels}${legend}
   </g>`;
 }
@@ -269,7 +269,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
     ${cardsSvg}
     ${trendPanel(PAD, panelY)}
     ${heatPanel(PAD + PANEL_W + GAP, panelY)}
-    <text x="${W - PAD - 4}" y="${H - 6}" font-size="9" fill="#3f3f46" text-anchor="end">更新于 ${stamp} UTC+8 · vibecafe.ai/usage</text>
+    <text x="${W - PAD - 4}" y="${H - 6}" font-size="9" fill="#3f3f46" text-anchor="end">Updated ${stamp} UTC+8 · vibecafe.ai/usage</text>
   </g>
 </svg>
 `;
