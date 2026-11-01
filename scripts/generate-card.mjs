@@ -35,6 +35,14 @@ for (const [name, sample, keys] of [
   const missing = keys.filter((k) => sample[k] === undefined);
   if (missing.length) throw new Error(`/api/usage ${name} missing fields: ${missing.join(', ')}`);
 }
+for (const s of sessions) {
+  if (!Number.isFinite(Date.parse(s.firstMessageAt))) {
+    throw new Error('Invalid session firstMessageAt');
+  }
+  if (!Number.isFinite(s.activeSeconds) || s.activeSeconds < 0) {
+    throw new Error('Invalid session activeSeconds');
+  }
+}
 
 // ---- split into current WINDOW days vs previous WINDOW days (UTC+8 calendar days) ----
 const DAY = 86400_000;
@@ -90,14 +98,14 @@ for (const b of curB) {
   }
 }
 
-// ---- heatmap: weekday x hour, sessions counted at their local start hour ----
-// /api/usage has no per-hour data for a multi-day range: buckets are daily whenever
-// days > 1, and sessions carry no hourly breakdown. firstMessageAt is the only
-// real sub-day timestamp, and each session contributes exactly one true point.
+// ---- active-time heatmap: session cohorts grouped by local start weekday/hour ----
+// /api/usage supplies session activeSeconds, not their hourly distribution.
+// Attribute each session's full active time once to its start slot; the visible
+// caption states this grouping rather than implying when all activity occurred.
 const heat = Array.from({ length: 7 }, () => new Array(24).fill(0));
 for (const s of curS) {
   const d = new Date(localMs(s.firstMessageAt)); // shifted, so UTC getters read as local
-  heat[d.getUTCDay()][d.getUTCHours()] += 1;     // 0=Sun
+  heat[d.getUTCDay()][d.getUTCHours()] += s.activeSeconds; // 0=Sun; values in seconds
 }
 const heatMax = Math.max(1, ...heat.flat());
 
@@ -106,7 +114,10 @@ const fmtTok = (n) =>
   n >= 1e9 ? (n / 1e9).toFixed(1) + 'B'
   : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M'
   : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : String(Math.round(n));
-const fmtHrs = (sec) => `${Math.floor(sec / 3600)}h ${Math.round(sec % 3600 / 60)}m`;
+const fmtHrs = (sec) => {
+  const minutes = Math.round(sec / 60);
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+};
 const fmtInt = (n) => Math.round(n).toLocaleString('en-US');
 const delta = (c, p) => {
   if (!p) return '';
@@ -216,7 +227,7 @@ function trendPanel(x, y) {
   </g>`;
 }
 
-// ---- hourly heatmap panel ----
+// ---- active-time heatmap panel ----
 function heatPanel(x, y) {
   const w = PANEL_W, h = panelH;
   const gridX = x + 52, gridY = y + 58;
@@ -232,7 +243,8 @@ function heatPanel(x, y) {
       const v = heat[r][c];
       // sqrt, not linear: one busy hour would otherwise flatten every other cell to level 1
       const lvl = v === 0 ? 0 : Math.min(5, 1 + Math.floor(Math.sqrt(v / heatMax) * 4.999));
-      cells += `<rect x="${gridX + c * step}" y="${gridY + r * step}" width="${cell}" height="${cell}" rx="2.5" fill="${shades[lvl]}"/>`;
+      const title = `${dayNames[r]} ${String(c).padStart(2, '0')}:00 (UTC+${TZ_OFFSET_H}): ${(v / 3600).toFixed(2)} active hours; grouped by session start`;
+      cells += `<rect x="${gridX + c * step}" y="${gridY + r * step}" width="${cell}" height="${cell}" rx="2.5" fill="${shades[lvl]}"><title>${esc(title)}</title></rect>`;
     }
   }
   for (let c = 0; c < cols; c += 3) {
@@ -246,10 +258,12 @@ function heatPanel(x, y) {
   return `
   <g>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#0d0d0f" stroke="#232326"/>
-    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">🗓 Hourly Activity</text>
+    <text x="${x + 18}" y="${y + 30}" font-size="13" fill="#e4e4e7">🗓 Active Time</text>
     <rect x="${x + w - 100}" y="${y + 15}" width="84" height="22" rx="11" fill="#111113" stroke="#232326"/>
-    <text x="${x + w - 58}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#a1a1aa">Sessions</text>
+    <text x="${x + w - 58}" y="${y + 30}" font-size="10" text-anchor="middle" fill="#a1a1aa">Hours</text>
     ${rowLabels}${cells}${colLabels}${legend}
+    <text x="${x + 18}" y="${y + h - 60}" font-size="10" fill="#71717a">Grouped by session start (UTC+${TZ_OFFSET_H})</text>
+    <text x="${x + w - 18}" y="${y + h - 60}" font-size="10" fill="#a1a1aa" text-anchor="end">Peak: ${(heatMax / 3600).toFixed(1)} h</text>
   </g>`;
 }
 
@@ -257,6 +271,7 @@ const now = new Date(Date.now() + TZ_OFFSET_H * 3600_000);
 const stamp = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${String(now.getUTCDate()).padStart(2, '0')} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`;
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Vibe Usage ${WINDOW}-day dashboard: ${esc(fmtTok(cur.total))} tokens, $${cur.cost.toFixed(2)}, ${esc(fmtHrs(cur.active))} active">
+  <desc>The Active Time heatmap sums session active hours, grouped by session start weekday and hour in UTC+${TZ_OFFSET_H}. It does not show the hour-by-hour distribution within each session.</desc>
   <defs>
     <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#d4d4d8"/>
@@ -276,4 +291,4 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 
 writeFileSync(new URL('../vibe-usage-card.svg', import.meta.url), svg);
 console.log(`Generated: $${cur.cost.toFixed(2)} · ${fmtTok(cur.total)} · ${fmtHrs(cur.active)} · ${cur.sessions} sessions`);
-console.log(`Heatmap: ${heat.flat().filter((v) => v > 0).length}/168 cells active, peak ${heatMax} sessions/hour`);
+console.log(`Heatmap: ${heat.flat().filter((v) => v > 0).length}/168 cells active, peak ${(heatMax / 3600).toFixed(2)} active hours by session start`);

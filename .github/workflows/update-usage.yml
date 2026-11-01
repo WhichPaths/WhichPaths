@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Test usage card
+        run: node --test scripts/generate-card.test.mjs
+
       - name: Generate usage card
         run: node scripts/generate-card.mjs
         env:
