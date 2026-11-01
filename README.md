@@ -7,7 +7,7 @@
 <div align="center">
 
 <a href="https://vibecafe.ai/@aggressive">
-  <img src="https://raw.githubusercontent.com/WhichPaths/WhichPaths/main/vibe-usage-card.svg?v=english-90d" alt="Vibe Usage — 90 day stats" width="100%">
+  <img src="https://raw.githubusercontent.com/WhichPaths/WhichPaths/main/vibe-usage-card.svg?v=active-time-90d" alt="Vibe Usage — 90 day stats" width="100%">
 </a>
 
 </div>
