@@ -25,7 +25,7 @@ function generate(sessions) {
     const result = spawnSync(process.execPath, ['--import', preload, script], {
       encoding: 'utf8', env: { ...process.env, VIBE_USAGE_API_KEY: 'fixture-only-key' },
     });
-    return { ...result, svg: result.status === 0 ? readFileSync(join(dir, 'vibe-usage-card.svg'), 'utf8') : '' };
+    return { ...result, svg: result.status === 0 ? readFileSync(join(dir, 'vibe-usage-warm.svg'), 'utf8') : '' };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Generates vibe-usage-card.svg — a full 90-day dashboard replica of vibecafe.ai/usage.
+// Generates vibe-usage-warm.svg — a full 90-day dashboard replica of vibecafe.ai/usage.
 // Data: request up to 180 days; previous 90-day deltas use available history.
 // API key: env VIBE_USAGE_API_KEY, or local ~/.vibe-usage/config.json.
 
@@ -285,6 +285,6 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 </svg>
 `;
 
-writeFileSync(new URL('../vibe-usage-card.svg', import.meta.url), svg);
+writeFileSync(new URL('../vibe-usage-warm.svg', import.meta.url), svg);
 console.log(`Generated: $${cur.cost.toFixed(2)} · ${fmtTok(cur.total)} · ${fmtHrs(cur.active)} · ${cur.sessions} sessions`);
 console.log(`Heatmap: ${heat.flat().filter((v) => v > 0).length}/168 cells active, peak ${heatMax} sessions/hour`);
