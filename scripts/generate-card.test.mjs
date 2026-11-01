@@ -31,7 +31,7 @@ function generate(sessions) {
   }
 }
 
-test('weights start-hour cohorts by active time within the 90-day window', () => {
+test('counts sessions by their UTC+8 start hour within the 90-day window', () => {
   const { status, stderr, svg } = generate([
     session('2026-10-31T15:30:00Z', 5400, '2026-11-01T03:30:00Z'),
     session('2026-10-31T16:15:00Z', 900),
@@ -40,13 +40,15 @@ test('weights start-hour cohorts by active time within the 90-day window', () =>
     session('2026-08-03T00:00:00Z', 7200),
   ]);
   assert.equal(status, 0, stderr);
-  assert.match(svg, /Grouped by session start \(UTC\+8\)/);
-  assert.match(svg, /<title>Sat 23:00 \(UTC\+8\): 1\.50 active hours/);
-  assert.match(svg, /<title>Sun 00:00 \(UTC\+8\): 1\.50 active hours/);
-  const durations = [...svg.matchAll(/<title>\w+ \d{2}:00 \(UTC\+8\): ([\d.]+) active hours/g)]
+  assert.match(svg, /Hourly Activity/);
+  assert.match(svg, /<title>Sat 23:00 \(UTC\+8\): 1 session</);
+  assert.match(svg, /<title>Sun 00:00 \(UTC\+8\): 2 sessions/);
+  assert.match(svg, /<title>Sun 09:00 \(UTC\+8\): 1 session</);
+  const counts = [...svg.matchAll(/<title>\w+ \d{2}:00 \(UTC\+8\): (\d+) sessions?</g)]
     .map((match) => Number(match[1]));
-  assert.equal(durations.length, 168);
-  assert.equal(durations.reduce((sum, hours) => sum + hours, 0), 3);
+  assert.equal(counts.length, 168);
+  assert.equal(counts.reduce((sum, count) => sum + count, 0), 4);
+  assert.ok(!svg.includes('active hours'), 'heatmap must count sessions instead of duration');
   assert.match(svg, /90-day dashboard/);
   assert.doesNotMatch(svg, /[\p{Script=Han}]/u);
 });
