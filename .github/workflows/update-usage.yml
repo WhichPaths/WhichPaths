@@ -33,5 +33,16 @@ jobs:
           git add vibe-usage-warm.svg
           if ! git diff --cached --quiet; then
             git commit -m "chore: update vibe usage card"
-            git push
+            for attempt in 1 2 3; do
+              if git push; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::Failed to push the usage card after 3 attempts."
+                exit 1
+              fi
+              delay=$((attempt * 10))
+              echo "::warning::Push attempt $attempt failed; retrying in ${delay}s."
+              sleep "$delay"
+            done
           fi
