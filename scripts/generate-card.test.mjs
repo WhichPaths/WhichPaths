@@ -10,7 +10,7 @@ function session(firstMessageAt, activeSeconds, lastMessageAt = firstMessageAt) 
     messageCount: 10, userMessageCount: 3 };
 }
 
-function generate(sessions) {
+function generate(sessions, responses = [{ status: 200 }]) {
   const dir = mkdtempSync(join(tmpdir(), 'vibe-card-test-'));
   try {
     mkdirSync(join(dir, 'scripts'));
@@ -20,8 +20,18 @@ function generate(sessions) {
       inputTokens: 1, outputTokens: 2, cachedInputTokens: 3, totalTokens: 3,
       estimatedCost: 0.01 }] };
     const preload = join(dir, 'fixture.mjs');
-    writeFileSync(preload, `Date.now = () => Date.parse('2026-11-01T12:00:00Z');
-      globalThis.fetch = async () => ({ ok: true, json: async () => (${JSON.stringify(payload)}) });`);
+    writeFileSync(preload, `
+      Date.now = () => Date.parse('2026-11-01T12:00:00Z');
+      const responses = ${JSON.stringify(responses)};
+      let fetchCalls = 0;
+      globalThis.fetch = async () => {
+        const response = responses[Math.min(fetchCalls++, responses.length - 1)];
+        return { ok: response.status >= 200 && response.status < 300, status: response.status,
+          json: async () => (${JSON.stringify(payload)}) };
+      };
+      globalThis.setTimeout = (callback) => { callback(); return 0; };
+      process.on('exit', () => console.log('fetchCalls=' + fetchCalls));
+    `);
     const result = spawnSync(process.execPath, ['--import', preload, script], {
       encoding: 'utf8', env: { ...process.env, VIBE_USAGE_API_KEY: 'fixture-only-key' },
     });
@@ -30,6 +40,26 @@ function generate(sessions) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+test('retries a transient usage API error and generates the card', () => {
+  const { status, stdout, stderr, svg } = generate(
+    [session('2026-11-01T00:00:00Z', 60)],
+    [{ status: 500 }, { status: 200 }],
+  );
+  assert.equal(status, 0, stderr);
+  assert.match(stdout, /fetchCalls=2/);
+  assert.match(svg, /Vibe Usage 90-day dashboard/);
+});
+
+test('does not retry a permanent usage API error', () => {
+  const { status, stdout, stderr } = generate(
+    [session('2026-11-01T00:00:00Z', 60)],
+    [{ status: 401 }],
+  );
+  assert.notEqual(status, 0);
+  assert.match(stderr, /HTTP 401/);
+  assert.match(stdout, /fetchCalls=1/);
+});
 
 test('counts sessions by their UTC+8 start hour within the 90-day window', () => {
   const { status, stderr, svg } = generate([

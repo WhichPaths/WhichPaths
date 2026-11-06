@@ -17,11 +17,37 @@ function getApiKey() {
   throw new Error('No API key: set VIBE_USAGE_API_KEY or run vibe-usage init');
 }
 
-const res = await fetch(`https://vibecafe.ai/api/usage?days=${WINDOW * 2}`, {
-  headers: { Authorization: `Bearer ${getApiKey()}` },
-});
-if (!res.ok) throw new Error(`HTTP ${res.status}`);
-const { buckets = [], sessions = [] } = await res.json();
+const USAGE_API_URL = `https://vibecafe.ai/api/usage?days=${WINDOW * 2}`;
+const MAX_USAGE_API_ATTEMPTS = 3;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchUsage() {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_USAGE_API_ATTEMPTS; attempt++) {
+    let res;
+    try {
+      res = await fetch(USAGE_API_URL, {
+        headers: { Authorization: `Bearer ${getApiKey()}` },
+      });
+    } catch (error) {
+      lastError = error;
+    }
+    if (res?.ok) return res.json();
+    if (res) {
+      lastError = new Error(`HTTP ${res.status}`);
+      if (res.status < 500 && res.status !== 429) throw lastError;
+    }
+
+    if (attempt < MAX_USAGE_API_ATTEMPTS) {
+      console.warn(`Usage API attempt ${attempt} failed (${lastError.message}); retrying.`);
+      await wait(attempt * 1000);
+    }
+  }
+  throw lastError;
+}
+
+const { buckets = [], sessions = [] } = await fetchUsage();
 
 // Fail loudly on an unexpected payload: a silently-missing field is what made the
 // heatmap render 168 empty cells for weeks instead of breaking the workflow.
